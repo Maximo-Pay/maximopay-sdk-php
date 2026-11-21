@@ -1,0 +1,124 @@
+{
+  "description": "Shared test vectors for the merchant webhook X-Signature (t=<unix s>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>, tolerance 300 s). The webhook-service spec and every SDK run them; a change here must keep all of them green.",
+  "secret": "whsec_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "toleranceSeconds": 300,
+  "sign": {
+    "timestamp": 1800000000,
+    "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+    "header": "t=1800000000,v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6"
+  },
+  "vectors": [
+    {
+      "name": "valid signature",
+      "header": "t=1800000000,v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": true
+    },
+    {
+      "name": "valid at the edge of the tolerance (300 s old)",
+      "header": "t=1799999700,v1=78a6da9b15c40bac6ac584d54541c72a5e70873dbf3fca9d141f2503ea8086de",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": true
+    },
+    {
+      "name": "valid with a timestamp in the near future",
+      "header": "t=1800000120,v1=5a02cbb0dfcbb9a39f6fb32c306a83d0f894f28ba93e9ef4d0426abc89b03eca",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": true
+    },
+    {
+      "name": "spaces around the parts",
+      "header": " t = 1800000000 , v1 = 7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6 ",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": true
+    },
+    {
+      "name": "one of several v1 matches (secret rotation)",
+      "header": "t=1800000000,v1=0000000000000000000000000000000000000000000000000000000000000000,v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": true
+    },
+    {
+      "name": "older than the tolerance (301 s)",
+      "header": "t=1799999699,v1=3ff2ecb7fe66889d22b2f279252c35022c867c0e697c2dab4384141fa78dc647",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "body changed by one byte",
+      "header": "t=1800000000,v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"} ",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "body re-serialized (escaped unicode)",
+      "header": "t=1800000000,v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"Jo\\u00e3o\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "signed with another secret",
+      "header": "t=1800000000,v1=d2989f205652b9d3b39d74333bb6a771d6106d80c21809f2203d4bb131efd6c5",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "timestamp swapped into an old signature",
+      "header": "t=1800000000,v1=46693a5336990b826cc20975690141f143d9098d2248fab5e02e4cf0c9a65215",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "no timestamp",
+      "header": "v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "non-numeric timestamp",
+      "header": "t=abc,v1=7141959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "no v1",
+      "header": "t=1800000000",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "v1 not hex",
+      "header": "t=1800000000,v1=zz41959a322ae08070bec76deda575303406599008168c02412ca45ccc6fc8f6",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "truncated v1",
+      "header": "t=1800000000,v1=7141959a322ae08070bec76deda57530",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    },
+    {
+      "name": "empty header",
+      "header": "",
+      "body": "{\"schemaVersion\":2,\"id\":\"7f1c2a9e-0000-4000-8000-000000000001\",\"status\":\"PAID\",\"amount\":\"1500\",\"referenceId\":\"pedido-123\",\"customerName\":\"João\"}",
+      "now": 1800000000,
+      "expected": false
+    }
+  ]
+}
