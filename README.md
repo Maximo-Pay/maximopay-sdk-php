@@ -43,12 +43,32 @@ echo $charge['metadata']['pixCopiaECola']; // e $charge['checkoutUrl']
 | `$mp->webhookEndpoints->create(['url' => …, 'secret' => …, 'events' => ['charge.paid']])` | `POST /merchants/webhooks` |
 | `$mp->webhookEndpoints->list()` / `retrieve($id)` / `update($id, ['isActive' => true])` / `delete($id)` | `/merchants/webhooks[/:id]` |
 | `$mp->webhookEndpoints->deliveries()` / `delivery($id)` | histórico de entregas |
+| `$mp->sandbox->charges->pay($id)` / `dispute($id, ['type' => 'FRAUD', 'amount' => 500])` | só no sandbox: paga a cobrança / abre uma MED |
+| `$mp->sandbox->disputes->close($id, 'LOST' \| 'WON')` | só no sandbox: encerra a MED |
+| `$mp->sandbox->withdrawals->complete($id)` / `fail($id, ?$reason)` / `return($id)` | só no sandbox: conclui, falha ou devolve o saque |
+| `$mp->sandbox->refunds->complete($refundId)` / `fail($refundId)` | só no sandbox: conclui ou recusa a devolução |
 
 As respostas vêm como arrays associativos, em camelCase, com dinheiro em string de centavos (`"1500"`).
 
-`webhookEndpoints->create` recusa `events` vazio antes de chamar a API, porque um webhook sem eventos não recebe nada. Use `['*']` para todos.
+`webhookEndpoints->create` pede `events` explícito (recusa a lista vazia antes de chamar a API). Use `['*']` para todos.
 
 Saque por chave de API só funciona com "exigir 2FA nos saques" desligado no painel; ligado, a API responde 403 `TOTP_REQUIRED`.
+
+## Sandbox
+
+O sandbox é a mesma API num endereço separado, com chaves `pk_test_`/`sk_test_` criadas no painel do sandbox. Para testar, troque só a URL base e a chave; nenhum dinheiro de verdade se move.
+
+```php
+$mp = new MaximoPay\Client('pk_test_...', 'sk_test_...', 'https://sandbox-api.seudominio.com.br/v1');
+
+$charge = $mp->charges->create(['amount' => 1500, 'paymentMethod' => 'PIX', 'customer' => $customer]);
+$mp->sandbox->charges->pay($charge['id']); // → PAID, e o seu webhook recebe charge.paid
+```
+
+- Toda cobrança, saque e webhook traz `livemode`: `false` no sandbox. Confira no webhook se o evento é do ambiente que você espera.
+- Chave de teste na API real: 401 `TEST_KEY_ON_LIVE`, com a URL do sandbox em `$e->details['sandboxUrl']`. Chave real no sandbox: 401 `LIVE_KEY_ON_SANDBOX`.
+- Saques e devoluções concluem sozinhos em uns 5 s; `withdrawals->fail` / `refunds->fail` servem para testar a falha antes disso. Cobranças só são pagas pelo comando.
+- Os comandos respondem o objeto atualizado. Eles não têm chave de idempotência, então o SDK nunca os repete; repetir um comando já aplicado dá 409 `SANDBOX_INVALID_STATE` (`details['status']`). Na API real eles dão 404.
 
 ## Idempotência e repetição
 
