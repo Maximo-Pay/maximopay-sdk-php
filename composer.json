@@ -2,7 +2,7 @@
   "name": "maximopay/maximopay-php",
   "description": "SDK do Máximo Pay para PHP: cobranças, saques e webhooks assinados.",
   "type": "library",
-  "license": "proprietary",
+  "license": "MIT",
   "require": {
     "php": ">=8.1",
     "ext-curl": "*",

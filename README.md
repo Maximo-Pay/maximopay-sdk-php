@@ -127,3 +127,7 @@ composer test
 ```
 
 Os testes rodam os vetores de assinatura de `contract/webhook-signature-vectors.json`, cópia do arquivo que a API testa (`sdks/contract` no fintech-baas-api). Se a assinatura mudar na API, atualize a cópia aqui.
+
+## Licença
+
+MIT. Veja [LICENSE](LICENSE).
